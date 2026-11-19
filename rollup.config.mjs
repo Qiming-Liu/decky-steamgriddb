@@ -54,7 +54,6 @@ export default defineConfig({
         /\.jpg$/i,
         /\.png$/i,
         /\.svg$/i,
-        /\.webm$/i,
         /\.webp$/i,
         /\.mp4$/i,
       ],

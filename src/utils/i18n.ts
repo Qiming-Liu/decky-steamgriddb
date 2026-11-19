@@ -23,163 +23,33 @@ import * as zhTw from '../i18n/zh-tw.json';
 import * as no from '../i18n/no.json';
 import * as hu from '../i18n/hu.json';
 
-const simplifiedChinese = {
-  name: '简体中文',
-  strings: zhCn,
-  credit: ['zhzy0077', 'XHXIAIEIN', 'simon3000'],
-};
-
-export const LANGS: {
-  [key: string]: {
-    name: string,
-    strings: {
-      [key: string]: string
-    },
-    credit: string[]
-  }
-} = {
-  cs: {
-    name: 'Čeština',
-    strings: cs,
-    credit: ['zenobit', 'theczechczech'],
-  },
-  da: {
-    name: 'Dansk',
-    strings: da,
-    credit: ['Jakob Frank Mogensen'],
-  },
-  de: {
-    name: 'Deutsch',
-    strings: de,
-    credit: ['Kurikuo', 'benutzer_artur7', 'Anja', 'FL0W', 'Remirax', 'LittleFreak', 'bignutty', 'Tom Taylor'],
-  },
-  fi: {
-    name: 'Suomi',
-    strings: fi,
-    credit: ['Jage'],
-  },
-  el: {
-    name: 'Ελληνικά',
-    strings: el,
-    credit: ['Emenesu'],
-  },
-  es: {
-    name: 'Español-España',
-    strings: es,
-    credit: ['Andrea Laguillo', 'Kam', 'm0uch0'],
-  },
-  'es-419': {
-    name: 'Español-Latinoamérica',
-    strings: es419,
-    credit: ['Kam', 'Knux03'],
-  },
-  fr: {
-    name: 'Français',
-    strings: fr,
-    credit: ['Michael Jean', 'Xunkar'],
-  },
-  it: {
-    name: 'Italiano',
-    strings: it,
-    credit: ['SpagottoB37', 'RodoMa92', 'federico-ntr'],
-  },
-  ja: {
-    name: '日本語',
-    strings: ja,
-    credit: ['Nes', 'Hogman'],
-  },
-  ko: {
-    name: '한국어',
-    strings: ko,
-    credit: ['yor42', 'sua (sua_owo)'],
-  },
-  nl: {
-    name: 'Nederlands',
-    strings: nl,
-    credit: ['Phanpy100 (Fanny)', 'Jannes Verlinde'],
-  },
-  pl: {
-    name: 'Polski',
-    strings: pl,
-    credit: ['DRS', 'Michał Kwiatkowski', 'MAX0R', 'minttuNB', 'Szymon Kucharski'],
-  },
-  pt: {
-    name: 'Português',
-    strings: pt,
-    credit: ['Kokasgui', 'Ev1lbl0w'],
-  },
-  'pt-br': {
-    name: 'Português-Brasil',
-    strings: ptBr,
-    credit: ['Oregano', 'Thomas Eric'],
-  },
-  ro: {
-    name: 'Română',
-    strings: ro,
-    credit: ['Munt'],
-  },
-  ru: {
-    name: 'Русский',
-    strings: ru,
-    credit: ['fycher', 'LostHikking'],
-  },
-  sv: {
-    name: 'Svenska',
-    strings: sv,
-    credit: ['Moneyman Dan', 'Super', 'Daniel Nylander'],
-  },
-  tr: {
-    name: 'Türkçe',
-    strings: tr,
-    credit: ['Bilgehan Ceviz', 'Sib | Twig'],
-  },
-  uk: {
-    name: 'Українська',
-    strings: uk,
-    credit: ['Veydzher', 'Kefir'],
-  },
-  'zh-cn': simplifiedChinese,
-  'sc-sc': simplifiedChinese, // sc-sc is "SteamChina" i think?, it's mapped to zh-cn in the client so doing the same here.
-  'zh-tw': {
-    name: '正體中文',
-    strings: zhTw,
-    credit: ['mingyc'],
-  },
-  no: {
-    name: 'Norsk',
-    strings: no,
-    credit: ['minttuNB'],
-  },
-  hu: {
-    name: 'Magyar',
-    strings: hu,
-    credit: ['minttuNB', 'BudaiChris'],
-  },
-//  th: {
-//    name: 'ไทย',
-//    strings: th,
-//    credit: []
-//  },
-  //  bg: {
-  //    name: 'български език',
-  //    strings: bg,
-  //    credit: []
-  //  },
-//  en: {
-//    name: 'English',
-//    strings: en,
-//    credit: []
-//  }
-//  vn: {
-//    name: 'Tiếng Việt',
-//    strings: vn,
-//    credit: []
-//  },
-//  id: {
-//    name: 'Bahasa Indonesia',
-//    strings: id,
-//    credit: []
-//  },
+// Steam locale -> catalog. "sc-sc" (Steam China) uses the Simplified Chinese one, as the client does.
+export const LANGS: { [key: string]: { [key: string]: string } } = {
+  cs,
+  da,
+  de,
+  fi,
+  el,
+  es,
+  'es-419': es419,
+  fr,
+  it,
+  ja,
+  ko,
+  nl,
+  pl,
+  pt,
+  'pt-br': ptBr,
+  ro,
+  ru,
+  sv,
+  tr,
+  uk,
+  'zh-cn': zhCn,
+  'sc-sc': zhCn,
+  'zh-tw': zhTw,
+  no,
+  hu,
 };
 
 let cachedLang: string | undefined;
@@ -189,16 +59,6 @@ const getCurrentLanguage = (): string => {
   const lang = window.LocalizationManager.m_rgLocalesToUse[0];
   cachedLang = lang;
   return lang;
-};
-
-export const getCredits = (lang?: string) => {
-  if (lang) return LANGS[lang]?.credit;
-  return LANGS[getCurrentLanguage()]?.credit;
-};
-
-export const getLanguageName = (lang?: string): string => {
-  if (lang) return LANGS[lang]?.name;
-  return LANGS[getCurrentLanguage()]?.name;
 };
 
 /**
@@ -225,7 +85,21 @@ const trans_string = (key: string, originalString: string, steamToken = false): 
   }
   if (lang === 'en') return originalString;
 
-  return LANGS[lang]?.strings?.[key] ?? originalString;
+  return LANGS[lang]?.[key] ?? originalString;
+};
+
+/**
+ * Steam hands some names over as tokens ("#LibraryTab_AllGames"); this turns
+ * one into the user's language. Plain text comes back as it is.
+ */
+export const localizeToken = (text: string): string => {
+  if (!text.startsWith('#')) return text;
+  const manager = window.LocalizationManager as unknown as { LocalizeString?: (token: string) => string };
+  const key = text.slice(1);
+  return manager.LocalizeString?.(text) ??
+    window.LocalizationManager.m_mapTokens.get(key) ??
+    window.LocalizationManager.m_mapFallbackTokens.get(key) ??
+    key;
 };
 
 // using "trans_string" so it can be found by dump-strings

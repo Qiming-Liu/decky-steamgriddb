@@ -1,9 +1,7 @@
 import {
-  useState,
   createContext,
   FC,
   ReactNode,
-  useEffect,
   useContext,
   useMemo,
 } from 'react';
@@ -21,34 +19,25 @@ type SettingsContextType = {
 };
 
 export const SettingsProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [setting, setSetting] = useState<{key: any, value: any}>();
-
-  const save = useMemo(() => async (setting: {key: any, value: any}) => {
-    log('writing setting', setting);
-    await call('set_setting', setting.key, setting.value);
+  // Writes go straight to the backend: several settings changed in one tick
+  // (e.g. a reset) must all be saved, not just the last one.
+  const save = useMemo(() => async (key: any, value: any) => {
+    log('writing setting', key, value);
+    await call('set_setting', key, value);
   }, []);
 
-  const saveDb = useMemo(() => debounce(async (key, value) => {
-    log('set setting state', key, value);
-    setSetting({ key, value });
-  }, 1500), []);
+  const saveDb = useMemo(() => debounce(save, 1500), [save]);
 
   const set = useMemo(() => (key, value, immediate = false) => {
     if (immediate) {
-      return setSetting({ key, value });
+      return save(key, value);
     }
     return saveDb(key, value);
-  }, [saveDb]) as SettingsContextType['set'];
+  }, [save, saveDb]) as SettingsContextType['set'];
 
   const get: SettingsContextType['get'] = useMemo(() => async (key, fallback) => {
     return await call('get_setting', key, fallback);
   }, []);
-
-  useEffect(() => {
-    if (setting) {
-      save(setting);
-    }
-  }, [save, setting]);
 
   return (
     <SettingsContext.Provider value={{ set, get }}>

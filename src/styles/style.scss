@@ -11,75 +11,14 @@
   --asset-size: 120px;
   margin-top: variables.$topBarHeight;
   height: calc(100% - variables.$topBarHeight);
-  background: var(--gpSystemDarkestGrey, #0E141B);
+  // DeckyGCM's page look: a dark gradient, tab bar a shade lighter.
+  background: linear-gradient(180deg, #0e141b 0%, #151c24 100%);
 
   // Background for tab pages
   div[class*="gamepadtabbedpage_TabHeaderRowWrapper"][class*="gamepadtabbedpage_Floating"],
   div[class*="gamepadtabbedpage_TabHeaderRowWrapper"] {
-    background: #1B2838;
-  }
-
-  $motdHeight: 40px;
-  .motd-wrap {
-    display: flex;
-    gap: .5em;
-    margin-top: 1em;
-    .motd {
-      flex: 1;
-      @include mixins.flex-center;
-      position: relative;
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-color: #05070a;
-      height: $motdHeight;
-      overflow: hidden;
-      @include mixins.cursor-outline(true);
-      transition:
-        outline-color ease-in-out 200ms,
-        transform ease-out 200ms;
-      &:hover {
-        transform: scale(1.01);
-        @include mixins.cursor-outline(false);
-      }
-    }
-    .motd-video-bg {
-      position: absolute;
-      width: 100%;
-      z-index: 0;
-    }
-    .motd-inner {
-      display: grid;
-      height: 100%;
-      grid-template-columns: 1fr 100%;
-      grid-template-rows: 100%;
-      column-gap: 1em;
-      align-items: center;
-      z-index: 1;
-      > img {
-        height: 100%;
-        grid-row: 1;
-      }
-      .motd-text {
-        display: flex;
-        flex-direction: column;
-        // don't like setting pixel values for fonts but have to be safe
-        .motd-title {
-          font-size: 15px;
-          line-height: 15px;
-          font-weight: 500;
-        }
-        .motd-subtitle {
-          font-size: 11px;
-          line-height: 11px;
-        }
-      }
-    }
-    .motd-hide {
-      @include mixins.flex-center;
-      padding: 0;
-      width: $motdHeight;
-      min-width: $motdHeight;
-    }
+    background: rgba(0, 0, 0, .28);
+    backdrop-filter: blur(8px);
   }
 
   .tabcontents-wrap {
@@ -121,7 +60,10 @@
   .sgdb-asset-toolbar {
     display: flex;
     width: 100%;
+    align-items: center;
     gap: var(--gpSpace-Gap, .6em);
+    padding: .5em 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
     // background-color: var(--gpSystemDarkestGrey, variables.$color-toolbar-bg);
     .filter-buttons {
       align-items: center;
@@ -129,7 +71,6 @@
       gap: .5em;
       > button {
         min-width: auto;
-        flex: 1;
         white-space: nowrap;
       }
     }

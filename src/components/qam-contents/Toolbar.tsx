@@ -1,4 +1,4 @@
-import { Focusable, SliderField, DialogButton, SliderFieldProps } from '@decky/ui';
+import { Focusable, SliderField, SliderFieldProps } from '@decky/ui';
 import {
   useState,
   useImperativeHandle,
@@ -13,6 +13,8 @@ import t from '../../utils/i18n';
 import useSettings from '../../hooks/useSettings';
 import useAssetSearch from '../../hooks/useAssetSearch';
 import { SGDB_ASSET_TYPE_READABLE } from '../../constants';
+import { ToolButton } from '../ui/shell';
+import { BadgeIcon, CrosshairIcon, FilterIcon } from '../ui/icons';
 
 const sliderProps = {
   grid_p: {
@@ -132,37 +134,39 @@ const Toolbar = forwardRef(({
 
   return (
     <Focusable className="sgdb-asset-toolbar" noFocusRing={noFocusRing} flow-children="row">
-      <Focusable className="filter-buttons">
-        <DialogButton
+      <Focusable className="filter-buttons" flow-children="row">
+        <ToolButton
           ref={toolbarFocusRef}
-          style={{ flex: 0 }}
+          icon={<FilterIcon size={16} />}
           noFocusRing
           onOKActionDescription={t('ACTION_OPEN_FILTER', 'Filter')}
           onClick={onFilterClick}
         >
           {t('ACTION_OPEN_FILTER', 'Filter')}
-        </DialogButton>
+        </ToolButton>
         {(
           externalSgdbData &&
           Object.keys(externalSgdbData).length !== 0 &&
           externalSgdbData?.steam[0]?.metadata[defaultAssetMap[assetType]]
         ) && (
-          <DialogButton
+          <ToolButton
+            icon={<BadgeIcon size={16} />}
             noFocusRing
             onOKActionDescription={t('ACTION_OPEN_OFFICIAL_ASSETS', 'Official {assetType}').replace('{assetType}', SGDB_ASSET_TYPE_READABLE[assetType])}
             onClick={onOfficialAssetsClick}
           >
             {t('ACTION_OPEN_OFFICIAL_ASSETS', 'Official {assetType}').replace('{assetType}', SGDB_ASSET_TYPE_READABLE[assetType])}
-          </DialogButton>
+          </ToolButton>
         )}
         {['logo', 'hero'].includes(assetType) && (
-          <DialogButton
+          <ToolButton
+            icon={<CrosshairIcon size={16} />}
             noFocusRing
             onOKActionDescription={t('CustomArt_EditLogoPosition', 'Adjust Logo Position', true)}
             onClick={onLogoPosClick}
           >
             {t('CustomArt_EditLogoPosition', 'Adjust Logo Position', true)}
-          </DialogButton>
+          </ToolButton>
         )}
       </Focusable>
       <SliderField

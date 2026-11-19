@@ -6,6 +6,7 @@ import { useSGDB } from '../../hooks/useSGDB';
 import useSettings from '../../hooks/useSettings';
 import { DEFAULT_TABS } from '../../constants';
 import style from '../../styles/style.scss';
+import { PageStyle } from '../ui/shell';
 
 import AssetTabs from './AssetTabs';
 
@@ -45,6 +46,7 @@ const SGDBPage: VFC = () => {
       <style>
         {style}
       </style>
+      <PageStyle />
       <div id="sgdb-wrap">
         <AssetSearchContext>
           <AssetTabs currentTab={currentTab} onShowTab={onShowTab} />

@@ -20,8 +20,10 @@ if WINDOWS:
     # workaound for py_modules not being added to path on windoge
     sys.path.append(decky.DECKY_PLUGIN_DIR)
     from py_modules.vdf import binary_dump, binary_load
+    from py_modules.store_button import StoreButton
 else:
     from vdf import binary_dump, binary_load
+    from store_button import StoreButton
 
 def get_steam_path():
     if WINDOWS:
@@ -47,9 +49,17 @@ def get_userdata_config(steam32):
 class Plugin:
     async def _main(self):
         self.settings = SettingsManager(name="steamgriddb", settings_directory=decky.DECKY_PLUGIN_SETTINGS_DIR)
+        self.store_button = StoreButton()
+        self.store_button.start()
 
     async def _unload(self):
-        pass
+        # Decky may unload an instance whose _main never ran.
+        store_button = getattr(self, 'store_button', None)
+        if store_button:
+            await store_button.stop()
+
+    async def set_store_button_label(self, label=''):
+        await self.store_button.set_label(label)
 
     async def download_as_base64(self, url=''):
         req = Request(url, headers={'User-Agent': 'decky-steamgriddb backend'})

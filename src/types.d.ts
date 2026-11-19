@@ -18,11 +18,6 @@ declare module '*.scss' {
   export default content;
 }
 
-declare module '*.webm' {
-  const content: string;
-  export default content;
-}
-
 type eAssetType = 0 | 1 | 2 | 3 | 4;
 
 type SGDBAssetType = 'grid_p' | 'grid_l' | 'hero' | 'logo' | 'icon';

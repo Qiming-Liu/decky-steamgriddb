@@ -1,6 +1,6 @@
 {
   "api_version": 1,
-  "name": "SteamGridDB",
+  "name": "SteamGridDB+",
   "author": "SteamGridDB",
   "flags": ["debug"],
   "publish": {

@@ -8,7 +8,10 @@ const getCustomLogoPosition = async (appId: number): Promise<LogoPosition | null
     if (!appoverview) return null;
     return await waitUntil((): any => {
       try {
-        return window.appDetailsStore.GetCustomLogoPosition(appoverview) as LogoPosition ?? null;
+        // Steam takes the app overview here, but @decky/ui types it as an appid.
+        return (window.appDetailsStore as unknown as {
+          GetCustomLogoPosition: (app: AppStoreAppOverview) => LogoPosition | null | undefined;
+        }).GetCustomLogoPosition(appoverview) ?? null;
       } catch (error) {
         return null;
       }

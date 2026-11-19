@@ -3,42 +3,30 @@ import {
   PanelSectionRow,
   Navigation,
   Field,
-  showModal,
-  ModalRoot,
   DialogButton,
-  DialogBody,
-  DialogHeader,
-  DialogBodyText,
-  ToggleField,
-  SliderField,
+  Focusable,
 } from '@decky/ui';
 import { FileSelectionType, openFilePicker } from '@decky/api';
-import { useState, useEffect, VFC, useCallback } from 'react';
-import {
-  SiPatreon,
-  SiGithub,
-  SiDiscord,
-  SiCrowdin,
-  SiMastodon,
-  SiKofi,
-  SiBluesky,
-} from 'react-icons/si';
+import { useState, useEffect, VFC, useCallback, ReactNode } from 'react';
 
-import BoopIcon from '../Icons/BoopIcon';
-import TwitterIcon from '../Icons/TwitterIcon';
-import t, { getCredits } from '../../utils/i18n';
-import TabSorter from '../TabSorter';
-import useSettings, { SettingsProvider } from '../../hooks/useSettings';
+import t from '../../utils/i18n';
+import { TABS_PAGE_ROUTE } from '../plugin-pages/TabsPage';
+import useSettings from '../../hooks/useSettings';
 import { addHomePatch, removeHomePatch } from '../../patches/homePatch';
+import { SWITCH_LIKE_HOME_SETTING, setSwitchLikeHome } from '../../patches/homeTabsPatch';
+import { rerenderAfterPatchUpdate } from '../../patches/patchUtils';
 import { addSquareLibraryPatch, removeSquareLibraryPatch } from '../../patches/squareLibraryPatch';
 import { addCapsuleGlowPatch } from '../../patches/capsuleGlowPatch';
 import { DIMENSIONS } from '../../constants';
 import { appgridClasses } from '../../static-classes';
+import { colors, Glyph, GLYPH, PageStyle, PictureChoice } from '../ui/shell';
+import { ChevronRightIcon, HomeIcon, ImageIcon, LibraryIcon } from '../ui/icons';
+import {
+  GlowArt, HomeDefaultArt, HomeSwitchArt, PortraitGridArt, RecentsDefaultArt, RecentsUniformArt, SquareGridArt,
+} from '../ui/art';
 
-import GuideVideoField from './GuideVideoField';
-import PanelSocialButton from './PanelSocialButton';
+const GLOW_STEPS = [0, 25, 50, 75, 100];
 
-const tabSettingsDesc = t('MSG_ASSET_TAB_SETTINGS_DESC', 'Reorder or hide unused tabs, and set the default tab that opens when using "{ACTION_CHANGE_ARTWORK}"').replace('{ACTION_CHANGE_ARTWORK}', t('ACTION_CHANGE_ARTWORK', 'Change Artwork...'));
 const squareGridSizes = DIMENSIONS.grid_p.options.filter((x) => {
   const [w,h] = x.value.split('x');
   return w === h;
@@ -61,19 +49,70 @@ const setPatches = (squares: boolean, uniformFeatured: boolean): void => {
   }
 };
 
+/** A small heading: the icon of the screen it changes, then the setting's name. */
+const Heading: VFC<{ icon: ReactNode; children: ReactNode; first?: boolean }> = ({ icon, children, first }) => (
+  <div style={{
+    display: 'flex', alignItems: 'center', gap: 8, padding: `${first ? 4 : 18}px 2px 8px`,
+    fontSize: 13, fontWeight: 600, color: colors.soft,
+  }}
+  >
+    <span aria-hidden style={{ display: 'inline-flex', color: colors.muted }}>{icon}</span>
+    <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{children}</span>
+  </div>
+);
+
+/** Opens the full-screen tab lists: library tabs and artwork tabs side by side. */
+const TabsLink: VFC = () => {
+  const open = () => {
+    Navigation.Navigate(TABS_PAGE_ROUTE);
+    Navigation.CloseSideMenus();
+  };
+  return (
+    <DialogButton
+      className="sgdb-ghost"
+      onClick={open}
+      style={{
+        width: '100%', minWidth: 0, height: 48, marginTop: 18, padding: '0 12px', display: 'flex', alignItems: 'center', gap: 10,
+        background: colors.well, color: colors.text, fontSize: 14, textAlign: 'left',
+      }}
+    >
+      <span aria-hidden style={{ display: 'inline-flex', gap: 4, color: colors.muted }}>
+        <LibraryIcon size={18} /><HomeIcon size={18} />
+      </span>
+      <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {t('LABEL_TABS_PAGE', 'Tabs')}
+      </span>
+      <ChevronRightIcon size={14} />
+    </DialogButton>
+  );
+};
+
+/** How to reach the artwork picker: game → options button → "Change Artwork...". */
+const HowTo: VFC = () => (
+  <div style={{
+    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 4, background: colors.well,
+    fontSize: 12, color: colors.muted,
+  }}
+  >
+    <LibraryIcon size={16} />
+    <ChevronRightIcon size={10} />
+    <Glyph glyph={GLYPH.MENU} />
+    <ChevronRightIcon size={10} />
+    <ImageIcon size={16} color={colors.accentText} />
+    <span style={{ minWidth: 0, color: colors.soft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      {t('ACTION_CHANGE_ARTWORK', 'Change Artwork...')}
+    </span>
+  </div>
+);
+
 const QuickAccessSettings: VFC = () => {
   const { get, set } = useSettings();
-  const [useCount, setUseCount] = useState<number | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [squares, setSquares] = useState<boolean>(false);
   const [uniformFeatured, setUniformFeatured] = useState<boolean>(false);
-  const [motdToggle, setMotdToggle] = useState<boolean>(false);
   const [capsuleGlowAmount, setCapsuleGlowAmount] = useState(100);
+  const [switchLikeHome, setSwitchLikeHomeState] = useState(false);
   const [debugAppid] = useState('70');
-
-  const handleMotdToggle = useCallback(async (val: boolean) => {
-    set('motd_hidden_global', val, true);
-    setMotdToggle(val);
-  }, [set]);
 
   const handleSquareToggle = useCallback(async (checked: boolean) => {
     set('squares', checked, true);
@@ -103,25 +142,30 @@ const QuickAccessSettings: VFC = () => {
     setCapsuleGlowAmount(val);
   }, [set]);
 
-  const handleSetUseCount = useCallback(async (val: number) => {
-    set('plugin_use_count', val, false);
-    setUseCount(val);
+  const handleSwitchLikeHomeToggle = useCallback((checked: boolean) => {
+    set(SWITCH_LIKE_HOME_SETTING, checked, true);
+    setSwitchLikeHomeState(checked);
+    setSwitchLikeHome(checked);
+    rerenderAfterPatchUpdate();
   }, [set]);
 
   useEffect(() => {
     (async () => {
-      setUseCount(await get('plugin_use_count', 0));
+      setSwitchLikeHomeState((await get(SWITCH_LIKE_HOME_SETTING, false)) === true);
       setSquares(await get('squares', false));
       setUniformFeatured(await get('uniform_featured', false));
       setCapsuleGlowAmount(await get('capsule_glow_amount', 100));
-      setMotdToggle(await get('motd_hidden_global', false));
+      setLoaded(true);
     })();
   }, [get]);
 
-  if (useCount === null) return null;
+  if (!loaded) return null;
+
+  const defaultLabel = t('LABEL_CHOICE_DEFAULT', 'Default');
 
   return (
     <>
+      <PageStyle />
       {process.env.ROLLUP_ENV === 'development' && (
         <PanelSection title="Debug">
           <PanelSectionRow>
@@ -144,32 +188,6 @@ const QuickAccessSettings: VFC = () => {
                 {debugAppid}
               </DialogButton>
               <DialogButton onClick={() => {
-                // for debugging reasons do not panic
-                set('motd_last_fetched', 0, true);
-                setTimeout(() => {
-                  set('motd_cached', null, true);
-                  setTimeout(() => {
-                    set('motd_hidden', null, true);
-                  }, 300);
-                }, 300);
-              }}
-              >
-              Reset MOTD
-              </DialogButton>
-              <SliderField
-                label="plugin_use_count"
-                notchCount={2}
-                showValue
-                notchTicksVisible={false}
-                onChange={handleSetUseCount}
-                value={useCount}
-                editableValue
-                min={0}
-                max={1337}
-                step={1}
-                resetValue={0}
-              />
-              <DialogButton onClick={() => {
                 openFilePicker(
                   FileSelectionType.FOLDER,
                   '/',
@@ -184,169 +202,55 @@ const QuickAccessSettings: VFC = () => {
           </PanelSectionRow>
         </PanelSection>
       )}
-      {(useCount <= 5) && ( // Hide tutorial if plugin has been used more than 5 times
-        <PanelSection title={t('LABEL_USAGE_TITLE', 'Lost? Here\'s a Quick Guide')}>
-          <PanelSectionRow>
-            <GuideVideoField
-              bottomSeparator="standard"
-              highlightOnFocus
-              focusable
-              onActivate={() => {
-                showModal(
-                  <ModalRoot>
-                    <DialogBody style={{ padding: '0 3.5em' }}>
-                      <GuideVideoField />
-                    </DialogBody>
-                  </ModalRoot>
-                );
-              }}
-            />
-          </PanelSectionRow>
-        </PanelSection>
-      )}
-      <PanelSection title={t('Settings', 'Settings', true)}>
-        <PanelSectionRow>
-          <ToggleField
-            label={t('LABEL_SQUARE_CAPSULES', 'Square Capsules')}
-            description={t('LABEL_SQUARE_CAPSULES_DESC', 'Use square capsules instead of portrait ones. Square filters will be automatically selected.')}
-            checked={squares}
-            onChange={handleSquareToggle}
-          />
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <ToggleField
-            label={t('LABEL_UNIFORM_RECENT', 'Matching Recents Capsule')}
-            description={t('LABEL_UNIFORM_RECENT_DESC', 'Make the most recently played game on the home screen match the rest of the capsules.')}
-            checked={uniformFeatured}
-            onChange={handleUniformFeaturedToggle}
-          />
-        </PanelSectionRow>
-        {appgridClasses?.LibraryImageBackgroundGlow && (
-          <PanelSectionRow>
-            <SliderField
-              label={t('LABEL_CAPSULE_GLOW', 'Capsule Glow')}
-              description={t('LABEL_CAPSULE_GLOW_DESC', 'Adjust capsule glow intensity in the library.')}
-              notchCount={2}
-              notchLabels={[
-                {
-                  notchIndex: 0,
-                  label: t('LABEL_CAPSULE_GLOW_OFF', 'None'),
-                },
-              ]}
-              notchTicksVisible={false}
-              onChange={handleCapsuleGlowChange}
-              value={capsuleGlowAmount}
-              min={0}
-              max={100}
-              step={1}
-              resetValue={100}
-            />
-          </PanelSectionRow>
-        )}
-        <PanelSectionRow>
-          <Field childrenLayout="below" description={tabSettingsDesc}>
-            <DialogButton
-              onClick={() => {
-                showModal((
-                  <ModalRoot>
-                    <SettingsProvider>
-                      <DialogHeader>
-                        {t('LABEL_SETTINGS_ASSET_TABS', 'Asset Tab Settings')}
-                      </DialogHeader>
-                      <DialogBodyText>{tabSettingsDesc}</DialogBodyText>
-                      <DialogBody>
-                        <TabSorter />
-                      </DialogBody>
-                    </SettingsProvider>
-                  </ModalRoot>
-                ));
-              }}
-            >
-              {t('LABEL_SETTINGS_ASSET_TABS', 'Asset Tab Settings')}
-            </DialogButton>
-          </Field>
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <ToggleField
-            label={t('LABEL_SETTINGS_DISABLE_MOTD', 'Disable Announcements')}
-            description={t('LABEL_SETTINGS_DISABLE_MOTD_DESC', 'Announcements are used sparingly to display important information or community events.')}
-            checked={motdToggle}
-            onChange={handleMotdToggle}
-          />
-        </PanelSectionRow>
-      </PanelSection>
-      {/* Uncomment this out should there be a need for experiments again. */}
-      {/* <PanelSection title="Experiments">
-        <div style={{ fontSize: '12px', padding: '12px 0px' }}>Features with little testing that may be too unstable for regular usage and might be removed later. (Requires restart)</div>
+      <PanelSection>
+        <Focusable flow-children="column" style={{ display: 'flex', flexDirection: 'column', paddingBottom: 8 }}>
+          <HowTo />
 
-      </PanelSection> */}
-      {getCredits() && (
-        <PanelSection title={t('LABEL_TRANSLATION_CREDIT_TITLE', 'English Translation')}>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '.25em',
-          }}
-          >
-            {getCredits().map((person: any) => <span key={person}>{person}</span>)}
-          </div>
-        </PanelSection>
-      )}
-      <PanelSection title={t('LABEL_MORE_SGDB_TITLE', 'More SteamGridDB Stuff')}>
-        <PanelSocialButton
-          icon={<SiDiscord fill="#5865F2" />}
-          url="https://discord.gg/bnSVJrz"
-        >
-          {t('ACTION_SGDB_DISCORD', 'Join the Discord')}
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiGithub />}
-          url="https://github.com/SteamGridDB/"
-        >
-          {t('ACTION_SGDB_GITHUB', 'Open Source Projects')}
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiPatreon fill="#FF424D" />}
-          url="https://www.patreon.com/steamgriddb"
-        >
-          {t('ACTION_SGDB_DONATE', 'Support us on Patreon')}
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiKofi fill="#FF5E5B" />}
-          url="https://ko-fi.com/steamgriddb"
-        >
-          Ko-fi
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiCrowdin fill="#fff" />} // actual branding is #2E3340 but it's too dark
-          url="https://crowdin.com/project/decky-steamgriddb"
-        >
-          {t('ACTION_SGDB_TRANSLATE', 'Help Translate')}
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<BoopIcon fill="#4e9ac6" />}
-          url="https://www.steamgriddb.com/boop"
-        >
-          {t('ACTION_SGDB_BOOP', 'Check out SGDBoop')}
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiBluesky fill="#0285FF" />}
-          url="https://bsky.app/profile/steamgriddb.com"
-        >
-          Bluesky
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<SiMastodon fill="#6364FF" />}
-          url="https://mastodon.gamedev.place/@SteamGridDB"
-        >
-          Mastodon
-        </PanelSocialButton>
-        <PanelSocialButton
-          icon={<TwitterIcon fill="#1DA1F2" />}
-          url="https://twitter.com/SteamGridDB"
-        >
-          lol
-        </PanelSocialButton>
+          <Heading icon={<HomeIcon size={16} />}>{t('LABEL_SWITCH_LIKE_HOME', 'Switch-like Home')}</Heading>
+          <PictureChoice
+            value={switchLikeHome}
+            onChange={handleSwitchLikeHomeToggle}
+            choices={[
+              { value: false, label: defaultLabel, art: <HomeDefaultArt /> },
+              { value: true, label: 'Switch', art: <HomeSwitchArt /> },
+            ]}
+          />
+
+          <Heading icon={<HomeIcon size={16} />}>{t('LABEL_UNIFORM_RECENT', 'Matching Recents Capsule')}</Heading>
+          <PictureChoice
+            value={uniformFeatured}
+            onChange={handleUniformFeaturedToggle}
+            choices={[
+              { value: false, label: defaultLabel, art: <RecentsDefaultArt /> },
+              { value: true, label: t('LABEL_CHOICE_MATCHING', 'Matching'), art: <RecentsUniformArt /> },
+            ]}
+          />
+
+          <Heading icon={<LibraryIcon size={16} />}>{t('LABEL_SQUARE_CAPSULES', 'Square Capsules')}</Heading>
+          <PictureChoice
+            value={squares}
+            onChange={handleSquareToggle}
+            choices={[
+              { value: false, label: t('LABEL_CHOICE_PORTRAIT', 'Portrait'), art: <PortraitGridArt /> },
+              { value: true, label: t('LABEL_CHOICE_SQUARE', 'Square'), art: <SquareGridArt /> },
+            ]}
+          />
+
+          {appgridClasses?.LibraryImageBackgroundGlow && (
+            <>
+              <Heading icon={<LibraryIcon size={16} />}>{t('LABEL_CAPSULE_GLOW', 'Capsule Glow')}</Heading>
+              {/* Five strengths drawn as they look; a value set by an older version selects the nearest one. */}
+              <PictureChoice
+                compact
+                value={GLOW_STEPS.reduce((best, step) => (Math.abs(step - capsuleGlowAmount) < Math.abs(best - capsuleGlowAmount) ? step : best))}
+                onChange={handleCapsuleGlowChange}
+                choices={GLOW_STEPS.map((step) => ({ value: step, label: `${step}%`, art: <GlowArt amount={step} /> }))}
+              />
+            </>
+          )}
+
+          <TabsLink />
+        </Focusable>
       </PanelSection>
     </>
   );
